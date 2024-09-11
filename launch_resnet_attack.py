@@ -5,6 +5,8 @@ from datasets import load_dataset
 from torchvision.models import resnet50, ResNet50_Weights
 from torch.utils.data import DataLoader
 import torch
+# import GPUtil
+import matplotlib.pyplot as plt 
 
 parser = argparse.ArgumentParser(description="Attacking a Resnet50 model")
 parser.add_argument('--eps', type=float, help='maximum perturbation for PGD attack', default=8 / 255)
@@ -71,24 +73,40 @@ dset_classes = weights.meta["categories"]
 attacker = ResnetPGDAttacker(model, dset_loader)
 
 if args.test:
-    print(f"===Testing on {BATCH_NUM if BATCH_NUM else "all"} batches of data===")
-    attacker.compute_accuracy(BATCH_NUM)
-    print(f"Accuracy on original images: {attacker.acc * 100}%")
-    torch.save({
-        'acc': attacker.acc,
-    }, RESULTS_PATH)
-
-else:
-    print(f"===Launching PGD attack on {BATCH_NUM if BATCH_NUM else "all"} batches of data===")
-    print(f"Attack configs: eps = {EPS}, alpha = {ALPHA}, steps = {STEPS}, batch size = {BATCH_SIZE}")
-
-    attacker.pgd_batch_attack(EPS, ALPHA, STEPS, BATCH_NUM)
+    print(f"===Testing on {BATCH_NUM if BATCH_NUM else 'all'} batches of data===")
+    attacker.pgd_batch_attack(eps=8/255, alpha=2/255, steps=20, batch_num=20)
     print(f"Accuracy on original images: {attacker.acc * 100}%")
     print(f"Accuracy on adversarial images: {attacker.adv_acc * 100}%")
+    # torch.save({
+    #     'acc': attacker.acc,
+    # }, RESULTS_PATH)
 
-    torch.save({
-        'acc': attacker.acc,
-        'adv_acc': attacker.adv_acc,
-        'adv_images': attacker.adv_images,
-        'labels': attacker.labels,
-    }, RESULTS_PATH)
+else:
+    epsilons = [0, 0.03, 0.05, 0.07]
+    accuracies = [] 
+    original_accuracy = attacker.acc * 100
+    
+    for eps in epsilons:
+        print(f"===Launching PGD attack on {BATCH_NUM if BATCH_NUM else 'all'} batches of data with eps={eps}===")
+        print(f"Attack configs: eps = {eps}, alpha = {ALPHA}, steps = {STEPS}, batch size = {BATCH_SIZE}")
+
+        attacker.pgd_batch_attack(eps, ALPHA, STEPS, BATCH_NUM)
+        print(f"Accuracy on original images: {attacker.acc * 100}%")
+        print(f"Accuracy on adversarial images: {attacker.adv_acc * 100}%")
+        accuracies.append(attacker.adv_acc * 100)
+
+        torch.save({
+            'eps': eps,
+            'adv_acc': attacker.adv_acc,
+            'adv_images': attacker.adv_images,
+            'labels': attacker.labels,
+        }, f"{RESULTS_PATH}_eps_{eps}.pt")
+
+    # Save and plot the results
+    plt.plot(epsilons, accuracies)
+    plt.xlabel('Epsilon values')
+    plt.ylabel('Attack accuracy (%)')
+    plt.title(f'Model accuracy on adversarial images for various epsilon values\nBatch number {args.batch_num}, '
+            f'Batch size {args.batch_size}, Alpha 2/255')
+    plt.savefig(os.path.join(RESULTS_DIR, 'epsilon_vs_accuracy.png'))
+    plt.show()
