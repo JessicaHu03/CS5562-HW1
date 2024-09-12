@@ -51,6 +51,7 @@ class ResnetPGDAttacker:
 
         adv_images = adv_images + torch.empty_like(adv_images).uniform_(-eps, eps)
         adv_images = torch.clamp(adv_images, min=0, max=1)
+        # attack is started from a random point within the allowed L∞ norm ball.
 
         for _ in range(steps):
             adv_images.requires_grad = True
@@ -68,11 +69,12 @@ class ResnetPGDAttacker:
             adv_images = adv_images + alpha * grad_sign
 
             # Projection step
+            # project the adversial images back into the allowed L∞ norm ball
             # pass  # TODO
-            perturbation = torch.clamp(adv_images - images, min=-eps, max=eps)
-            adv_images = torch.clamp(images + perturbation, min=0, max=1)
+            perturb = torch.clamp(adv_images - images, min=-eps, max=eps)
+            adv_images = torch.clamp(images + perturb, min=0, max=1)
+            # torch.clamp ensures the pixel values remain between 0 and 1.
 
-            # Clip image values between 0 and 1
             adv_images = adv_images.detach()
 
         return adv_images
