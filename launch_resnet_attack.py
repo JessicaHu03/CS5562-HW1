@@ -82,7 +82,7 @@ if args.test:
     # }, RESULTS_PATH)
 
 else:
-    epsilons = [ 0.4, 0.6, 0.8, 1]
+    epsilons = [ 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     accuracies = [] 
     # original_accuracy = attacker.acc * 100
     
@@ -102,11 +102,11 @@ else:
             'labels': attacker.labels,
         }, f"{RESULTS_PATH}_eps_{eps}.pt")
 
-    # # Save and plot the results
-    # plt.plot(epsilons, accuracies)
-    # plt.xlabel('Epsilon values')
-    # plt.ylabel('Attack accuracy (%)')
-    # plt.title(f'Model accuracy on adversarial images for various epsilon values\nBatch number {args.batch_num}, '
-    #         f'Batch size {args.batch_size}, Alpha 2/255')
-    # plt.savefig(os.path.join(RESULTS_DIR, 'epsilon_vs_accuracy.png'))
-    # plt.show()
+    # Save and plot the results
+    plt.plot(epsilons, accuracies)
+    plt.xlabel('Epsilon values')
+    plt.ylabel('Attack accuracy (%)')
+    plt.title(f'Model accuracy on adversarial images for various epsilon values\nBatch number {args.batch_num}, '
+            f'Batch size {args.batch_size}, Alpha 2/255')
+    plt.savefig(os.path.join(RESULTS_DIR, 'epsilon_vs_accuracy.png'))
+    plt.show()
