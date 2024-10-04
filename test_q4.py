@@ -95,85 +95,11 @@ train_dataset, test_dataset = random_split(combined_dataset, [train_size, test_s
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
-# adv_dataset = AdversarialDataset(adv_images, labels)
-# # adv_dataset = TensorDataset(adv_images, labels)
-
-# # Create the dataloader for fine-tuning
-# adv_loader = DataLoader(adv_dataset, batch_size=32, shuffle=True) 0
-
-
-##################### Training ###############################################
-# Load the pre-trained ResNet model
 weights = ResNet50_Weights.DEFAULT
 model = resnet50(weights=weights)
 
-# Freeze all layers except the final fully connected layer
-for param in model.parameters():
-    param.requires_grad = False
-
-# Replace the final fully connected layer for fine-tuning
-num_ftrs = model.fc.in_features
-# model.fc = nn.Linear(num_ftrs, len(set(all_labels.tolist())))  
-model.fc = nn.Linear(num_ftrs, 1000)
-
-# Move model to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
-
-# Loss function
-criterion = nn.CrossEntropyLoss()
-# Optimizer
-optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
-# optimizer = optim.Adam(model.parameters(), lr=lr)
-scheduler = StepLR(optimizer, step_size=7, gamma=0.1)
-
-
-# set model to training mode    
-model.train() 
-
-# Training loop
-num_epochs = 10 
-for epoch in range(num_epochs):
-    running_loss = 0.0
-    correct = 0
-    total = 0
-
-    for images, labels in train_loader:
-        images, labels = images.to(device), labels.to(device)
-
-        # Validate labels
-        if torch.any((labels < 0) | (labels >= 1000)):  # ImageNet # classes = 1000
-            print(f"Invalid labels found in batch {i}. Skipping this batch.")
-            continue
-    
-        # Zero the parameter gradients
-        optimizer.zero_grad()
-
-        # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
-
-        # Accumulate loss and accuracy
-        running_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
-        
-        # Free memory after each batch
-        torch.cuda.empty_cache()
-
-    scheduler.step()
-    
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss / len(train_loader)}, Accuracy: {100 * correct / total:.2f}%")
-
-print("Finished fine-tuning the model")
-
-# optional: save the fine-tuned model
-torch.save(model.state_dict(), 'results/fine_tuned_resnet.pth')
 
 ########################## TESTING #####################
 def test_model(model, test_loader, device='cuda'):
@@ -199,25 +125,3 @@ model.to(device)
 
 # Test the model on the test dataset
 test_model(model, test_loader)
-
-# Load the test dataset 
-# hidden_test_images, hidden_test_labels = load_adversarial_images('results_dataset/adv_images_eps_0.3.pt')
-# hidden_test_dataset = TensorDataset(hidden_test_images, hidden_test_labels)
-# hidden_test_loader = DataLoader(hidden_test_dataset, batch_size=32)
-
-# results_dir = 'results_dataset'
-# trained_on = 'adv_images_eps_0.1.pt'  # The set the model was trained on
-# adversarial_files = [f for f in os.listdir(results_dir) if f.endswith('.pt') and f != trained_on]
-
-# # Test the model on each adversarial image set
-# for file_name in adversarial_files:
-#     print(f'\nTesting on {file_name}...')
-#     file_path = os.path.join(results_dir, file_name)
-    
-#     # Load the hidden adversarial images and labels
-#     hidden_test_images, hidden_test_labels = load_adversarial_images(file_path)
-#     hidden_test_dataset = TensorDataset(hidden_test_images, hidden_test_labels)
-#     hidden_test_loader = DataLoader(hidden_test_dataset, batch_size=32)
-    
-#     # Test the model on the loaded dataset
-#     test_model(model, hidden_test_loader)
